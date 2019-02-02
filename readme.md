@@ -36,4 +36,26 @@ To start Hydra inside Atom, click _Packages_ in top menu bar. Under "atom-hydra"
 
 --------------
 
-**⚠️ more coming soon ⚠️**
+# Examples
+
+To follow along with slides, use example files found in [examples](/examples)
+
+--------------
+
+# Cheatsheet
+## Variables & Functions
+
+|name |description |example |
+|:-|:-|:-|
+| bpm | change bpm of hydra cycles | `bpm( 120 );` |
+| Math.abs | keep values position | `Math.abs(-1) // returns 1` |
+| Math.random | creates a random float between 0 and 1 | `Math.random()*2` |
+| Math.sin | sin wave for more fluid animation | `Math.sin(value)` |
+| mouse.x | x position of mouse | `mouse.x / window.innerWidth * 100` |
+| mouse.y | y position of mouse | `mouse.y / window.innerHeight * 100` |
+| time | elapse time in milliseconds | `() => Math.sin(time)` |
+| window.innerWidth | width of window | |
+| window.innerHeight | height of window | |
+| screencap | eval this function to save an image of your hydra sketch | `screencap();` |
+
+----------
