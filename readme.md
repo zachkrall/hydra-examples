@@ -43,6 +43,9 @@ To follow along with slides, use example files found in [examples](/examples)
 --------------
 
 # Cheatsheet
+
+[List of all available function](https://github.com/ojack/hydra/blob/master/docs/funcs.md)
+
 ## Variables & Functions
 
 |name |description |example |
