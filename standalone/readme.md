@@ -1,0 +1,2 @@
+- `npm install` in terminal to install node modules
+- use `npm run build` to build bundle with browserify
