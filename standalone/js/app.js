@@ -29,6 +29,10 @@ const sketch = new Hydra({
 // once hydra instance is created
 // you can then copy / paste exisiting hydra sketch
 
-osc().out(o0);
+// osc().out(o0);
+
+voronoi(2, 0.05, 0)
+  .modulate(voronoi(12, 0.1, 0))
+  .out(o0);
 
 render(o0);

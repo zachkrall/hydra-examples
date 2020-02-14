@@ -1,7 +1,7 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 const Hydra = require("hydra-synth");
 
-const hydra = new Hydra({
+const sketch = new Hydra({
   // selects our canvas element in our DOM
   canvas: document.getElementById("hydra-canvas"),
 
@@ -30,11 +30,70 @@ const hydra = new Hydra({
 // once hydra instance is created
 // you can then copy / paste exisiting hydra sketch
 
-osc().out(o0);
+// osc().out(o0);
+
+voronoi(2, 0.05, 0)
+  .modulate(voronoi(12, 0.1, 0))
+  .out(o0);
 
 render(o0);
 
 },{"hydra-synth":4}],2:[function(require,module,exports){
+module.exports = function (cb) {
+    if (typeof Promise !== 'function') {
+      var err = new Error('Device enumeration not supported.');
+      err.kind = 'METHOD_NOT_AVAILABLE';
+      if (cb) {
+          console.warn('module now uses promise based api - callback is deprecated');
+          return cb(err);
+      }
+      throw err;
+    }
+
+    return new Promise(function(resolve, reject) {
+        var processDevices = function (devices) {
+            var normalizedDevices = [];
+            for (var i = 0; i < devices.length; i++) {
+                var device = devices[i];
+                //make chrome values match spec
+                var kind = device.kind || null;
+                if (kind && kind.toLowerCase() === 'audio') {
+                    kind = 'audioinput';
+                } else if (kind && kind.toLowerCase() === 'video') {
+                    kind = 'videoinput';
+                }
+                normalizedDevices.push({
+                    facing: device.facing || null,
+                    deviceId: device.id || device.deviceId || null,
+                    label: device.label || null,
+                    kind: kind,
+                    groupId: device.groupId || null
+                });
+            }
+            resolve(normalizedDevices);
+            if (cb) {
+                console.warn('module now uses promise based api - callback is deprecated');
+                cb(null, normalizedDevices);
+            }
+        };
+
+        if (window.navigator && window.navigator.mediaDevices && window.navigator.mediaDevices.enumerateDevices) {
+            window.navigator.mediaDevices.enumerateDevices().then(processDevices);
+        } else if (window.MediaStreamTrack && window.MediaStreamTrack.getSources) {
+            window.MediaStreamTrack.getSources(processDevices);
+        } else {
+            var err = new Error('Device enumeration not supported.');
+            err.kind = 'METHOD_NOT_AVAILABLE';
+            reject(err);
+            if (cb) {
+                console.warn('module now uses promise based api - callback is deprecated');
+                cb(err);
+            }
+        }
+    });
+};
+
+},{}],3:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -558,61 +617,6 @@ function functionBindPolyfill(context) {
     return fn.apply(context, arguments);
   };
 }
-
-},{}],3:[function(require,module,exports){
-module.exports = function (cb) {
-    if (typeof Promise !== 'function') {
-      var err = new Error('Device enumeration not supported.');
-      err.kind = 'METHOD_NOT_AVAILABLE';
-      if (cb) {
-          console.warn('module now uses promise based api - callback is deprecated');
-          return cb(err);
-      }
-      throw err;
-    }
-
-    return new Promise(function(resolve, reject) {
-        var processDevices = function (devices) {
-            var normalizedDevices = [];
-            for (var i = 0; i < devices.length; i++) {
-                var device = devices[i];
-                //make chrome values match spec
-                var kind = device.kind || null;
-                if (kind && kind.toLowerCase() === 'audio') {
-                    kind = 'audioinput';
-                } else if (kind && kind.toLowerCase() === 'video') {
-                    kind = 'videoinput';
-                }
-                normalizedDevices.push({
-                    facing: device.facing || null,
-                    deviceId: device.id || device.deviceId || null,
-                    label: device.label || null,
-                    kind: kind,
-                    groupId: device.groupId || null
-                });
-            }
-            resolve(normalizedDevices);
-            if (cb) {
-                console.warn('module now uses promise based api - callback is deprecated');
-                cb(null, normalizedDevices);
-            }
-        };
-
-        if (window.navigator && window.navigator.mediaDevices && window.navigator.mediaDevices.enumerateDevices) {
-            window.navigator.mediaDevices.enumerateDevices().then(processDevices);
-        } else if (window.MediaStreamTrack && window.MediaStreamTrack.getSources) {
-            window.MediaStreamTrack.getSources(processDevices);
-        } else {
-            var err = new Error('Device enumeration not supported.');
-            err.kind = 'METHOD_NOT_AVAILABLE';
-            reject(err);
-            if (cb) {
-                console.warn('module now uses promise based api - callback is deprecated');
-                cb(err);
-            }
-        }
-    });
-};
 
 },{}],4:[function(require,module,exports){
 const Output = require('./src/output.js')
@@ -3695,7 +3699,7 @@ module.exports = function (deviceId) {
     .catch(console.log.bind(console))
 }
 
-},{"enumerate-devices":3}],18:[function(require,module,exports){
+},{"enumerate-devices":2}],18:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -7718,7 +7722,7 @@ Engine.prototype.tick = function() {
     this.emit('tick', dt)
     this.last = time
 }
-},{"events":2,"inherits":18,"raf":25,"right-now":27}],25:[function(require,module,exports){
+},{"events":3,"inherits":18,"raf":25,"right-now":27}],25:[function(require,module,exports){
 (function (global){
 var now = require('performance-now')
   , root = typeof window === 'undefined' ? global : window
