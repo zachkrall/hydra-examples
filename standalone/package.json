@@ -11,7 +11,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "browserify": "^16.5.0",
-    "hydra-synth": "^1.0.27"
+    "browserify": "^16.5.0"
+  },
+  "dependencies": {
+    "hydra-synth": "github:zachkrall/hydra-synth"
   }
 }

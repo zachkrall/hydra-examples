@@ -1,7 +1,15 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 const Hydra = require("hydra-synth");
 
-const sketch = new Hydra({
+// choose correct precision value
+let isIOS =
+  (/iPad|iPhone|iPod/.test(navigator.platform) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) &&
+  !window.MSStream;
+let precisionValue = isIOS ? 'highp' : 'mediump';
+
+// set up Hydra Sketch
+window.sketch = new Hydra({
   // selects our canvas element in our DOM
   canvas: document.getElementById("hydra-canvas"),
 
@@ -22,9 +30,11 @@ const sketch = new Hydra({
 
   numOutputs: 4,
 
-  detectAudio: false
+  detectAudio: false,
   // prevents microphone prompt
   // if your code doesn't use audio
+
+  precision: precisionValue
 });
 
 // once hydra instance is created
@@ -37,6 +47,8 @@ voronoi(2, 0.05, 0)
   .out(o0);
 
 render(o0);
+
+console.log(sketch);
 
 },{"hydra-synth":4}],2:[function(require,module,exports){
 module.exports = function (cb) {
@@ -640,7 +652,8 @@ class HydraSynth {
     autoLoop = true,
     detectAudio = true,
     enableStreamCapture = true,
-    canvas
+    canvas,
+    precision = 'mediump'
   } = {}) {
 
     this.bpm = 60
@@ -651,6 +664,16 @@ class HydraSynth {
     this.makeGlobal = makeGlobal
     this.renderAll = false
     this.detectAudio = detectAudio
+
+    // only allow valid precision options
+    let precisionOptions = ['lowp','mediump','highp']
+    let precisionValid = precisionOptions.includes(precision.toLowerCase())
+
+    this.precision = precisionValid ? precision.toLowerCase() : 'mediump'
+
+    if(!precisionValid){
+      console.warn('[hydra-synth warning]\nConstructor was provided an invalid floating point precision value of "' + precision + '". Using default value of "mediump" instead.')
+    }
 
     // boolean to store when to save screenshot
     this.saveFrame = false
@@ -773,7 +796,7 @@ class HydraSynth {
 
     this.renderAll = this.regl({
       frag: `
-      precision highp float;
+      precision ${this.precision} float;
       varying vec2 uv;
       uniform sampler2D tex0;
       uniform sampler2D tex1;
@@ -801,7 +824,7 @@ class HydraSynth {
       }
       `,
       vert: `
-      precision highp float;
+      precision ${this.precision} float;
       attribute vec2 position;
       varying vec2 uv;
 
@@ -828,7 +851,7 @@ class HydraSynth {
 
     this.renderFbo = this.regl({
       frag: `
-      precision highp float;
+      precision ${this.precision} float;
       varying vec2 uv;
       uniform vec2 resolution;
       uniform sampler2D tex0;
@@ -838,7 +861,7 @@ class HydraSynth {
       }
       `,
       vert: `
-      precision highp float;
+      precision ${this.precision} float;
       attribute vec2 position;
       varying vec2 uv;
 
@@ -865,7 +888,12 @@ class HydraSynth {
   _initOutputs (numOutputs) {
     const self = this
     this.o = (Array(numOutputs)).fill().map((el, index) => {
-      var o = new Output({regl: this.regl, width: this.width, height: this.height})
+      var o = new Output({
+        regl: this.regl,
+        width: this.width,
+        height: this.height,
+        precision: this.precision
+      })
       o.render()
       o.id = index
       if (self.makeGlobal) window['o' + index] = o
@@ -898,7 +926,7 @@ class HydraSynth {
 
   _generateGlslTransforms () {
     const self = this
-    const gen = new GeneratorFactory(this.o[0])
+    const gen = new GeneratorFactory(this.o[0], this.precision)
     window.generator = gen
     Object.keys(gen.functions).forEach((key)=>{
       self[key] = gen.functions[key]
@@ -1081,13 +1109,13 @@ function formatArguments (userArgs, defaultArgs) {
 }
 
 
-var GeneratorFactory = function (defaultOutput) {
+var GeneratorFactory = function (defaultOutput, precision) {
 
   let self = this
   self.functions = {}
 
 
-  window.frag = shaderManager(defaultOutput)
+  window.frag = shaderManager(defaultOutput, precision)
 
   // extend Array prototype
   Array.prototype.fast = function(speed) {
@@ -1131,7 +1159,8 @@ var GeneratorFactory = function (defaultOutput) {
             glslString += ')'
             return glslString
           },
-          uniforms: []
+          uniforms: [],
+          precision: precision
         }
         inputs.forEach((input, index) => {
           if (input.isUniform) {
@@ -1188,9 +1217,9 @@ var GeneratorFactory = function (defaultOutput) {
 //   iterate through transform types and create a function for each
 //
 Generator.prototype.compile = function (pass) {
-//  console.log("compiling", pass)
+ // console.log("compiling", pass)
   var frag = `
-  precision highp float;
+  precision ${pass.precision} float;
   ${pass.uniforms.map((uniform) => {
     let type = ''
     switch (uniform.type) {
@@ -1230,7 +1259,7 @@ Generator.prototype.compile = function (pass) {
 // fragment shader code
 Generator.prototype.compileRenderPass = function (pass) {
   var frag = `
-      precision highp float;
+      precision ${pass.precision} float;
       ${pass.uniforms.map((uniform) => {
         let type = ''
         switch (uniform.type) {
@@ -3289,6 +3318,7 @@ const transforms = require('./glsl-transforms.js')
 
 var Output = function (opts) {
   this.regl = opts.regl
+  this.precision = opts.precision
   this.positionBuffer = this.regl.buffer([
     [-2, 0],
     [0, -2],
@@ -3343,7 +3373,7 @@ Output.prototype.getTexture = function () {
 Output.prototype.clear = function () {
   this.transformIndex = 0
   this.fragHeader = `
-  precision highp float;
+  precision ${this.precision} float;
 
   uniform float time;
   varying vec2 uv;
@@ -3355,7 +3385,7 @@ Output.prototype.clear = function () {
   //   gl_FragColor = color;
   // }`
   this.vert = `
-  precision highp float;
+  precision ${this.precision} float;
   attribute vec2 position;
   varying vec2 uv;
 
@@ -3535,11 +3565,12 @@ module.exports = {
 // 1. how to handle multi-pass renders
 // 2. how to handle vertex shaders
 
-module.exports = function (defaultOutput) {
+module.exports = function (defaultOutput, precision) {
 
   var Frag = function (shaderString) {
     var obj =  Object.create(Frag.prototype)
     obj.shaderString =   `
+    precision ${precision} float;
     void main () {
       vec2 st = gl_FragCoord.xy/resolution.xy;
       gl_FragColor = vec4(st, 1.0, 1.0);
@@ -3551,7 +3582,7 @@ module.exports = function (defaultOutput) {
 
   Frag.prototype.compile = function () {
     var frag = `
-    precision highp float;
+    precision ${precision} float;
     uniform float time;
     uniform vec2 resolution;
     varying vec2 uv;
@@ -3567,7 +3598,8 @@ module.exports = function (defaultOutput) {
     output.frag = frag
     var pass = {
       frag: frag,
-      uniforms: output.uniforms
+      uniforms: output.uniforms,
+      precision: precisionValue
     }
     console.log('rendering', pass)
     var passes = []
