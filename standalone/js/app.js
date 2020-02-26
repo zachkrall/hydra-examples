@@ -33,7 +33,9 @@ window.sketch = new Hydra({
   // prevents microphone prompt
   // if your code doesn't use audio
 
-  precision: precisionValue
+  precision: precisionValue,
+
+  enableStreamCapture: false
 });
 
 // once hydra instance is created
